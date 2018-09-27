@@ -1,0 +1,41 @@
+anypoint:
+  platform:
+    analytics_base_uri: 
+    client_id: 
+    client_secret: 
+    base_uri: 
+    visualizer: 
+      layer: "Process"
+  mq:
+    url: 
+    queue:
+      name: 
+    client:
+      id: 
+      secret: 
+      
+customer:
+  dapi:
+    host: 
+    port: 
+    protocol: 
+    basePath: 
+    
+notification:
+  dapi:
+    host: 
+    port: 
+    protocol: 
+    basePath: 
+
+orderFulfillment:
+  papi:
+    host: 
+    port: 
+    protocol: 
+    basePath: 
+    
+app: 
+  client:
+    id: 
+    secret: 

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:order-fulfillment-api="http://www.mulesoft.org/schema/mule/order-fulfillment-api" xmlns:notification-apispec="http://www.mulesoft.org/schema/mule/notification-apispec"
+	xmlns:customer-apispec="http://www.mulesoft.org/schema/mule/customer-apispec"
+	xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd
+http://www.mulesoft.org/schema/mule/customer-apispec http://www.mulesoft.org/schema/mule/customer-apispec/current/mule-customer-apispec.xsd
+http://www.mulesoft.org/schema/mule/notification-apispec http://www.mulesoft.org/schema/mule/notification-apispec/current/mule-notification-apispec.xsd
+http://www.mulesoft.org/schema/mule/order-fulfillment-api http://www.mulesoft.org/schema/mule/order-fulfillment-api/current/mule-order-fulfillment-api.xsd">
+	<configuration-properties doc:name="Configuration properties" doc:id="1bd2fc7f-0455-487f-b019-506bc65af6b9" file="config/configuration.yaml" />
+	<anypoint-mq:default-subscriber-config name="Anypoint_MQ_Default_subscriber" doc:name="Anypoint MQ Default subscriber" doc:id="6e0e8901-7bdd-442b-b618-0161c7c71642" >
+		<anypoint-mq:connection url="${anypoint.mq.url}" clientId="${anypoint.mq.client.id}" clientSecret="${anypoint.mq.client.secret}" />
+	</anypoint-mq:default-subscriber-config>
+	<customer-apispec:config name="Customer_API_Spec_Config" doc:name="Customer API Spec Config" doc:id="a2d77e01-b695-46eb-bfca-f1868cc4c7be" property_host="${customer.dapi.host}" property_port="${customer.dapi.port}" property_basePath="${customer.dapi.basePath}" property_protocol="${customer.dapi.protocol}" property_client-id="${app.client.id}" property_client-secret="${app.client.secret}"/>
+	<notification-apispec:config name="Notification_API_Spec_Config" doc:name="Notification API Spec Config" doc:id="3c6bb4ba-afa4-4366-b84e-2a5268e5fea9" property_host="${notification.dapi.host}" property_port="${notification.dapi.port}" property_basePath="${notification.dapi.basePath}" property_protocol="${notification.dapi.protocol}" property_client-id="${app.client.id}" property_client-secret="${app.client.secret}" />
+	<order-fulfillment-api:config name="Order_Fulfillment_API_Config" doc:name="Order Fulfillment API Config" doc:id="4944d3a9-bfef-433c-ac8d-75d8a4472e5d" property_host="${orderFulfillment.papi.host}" property_port="${orderFulfillment.papi.port}" property_basePath="${orderFulfillment.papi.basePath}" property_protocol="${orderFulfillment.papi.protocol}" property_client-id="${app.client.id}" property_client-secret="${app.client.secret}"/>
+</mule>
