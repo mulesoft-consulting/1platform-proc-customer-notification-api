@@ -15,7 +15,7 @@ http://www.mulesoft.org/schema/mule/order-fulfillment-api http://www.mulesoft.or
 				<flow-ref doc:name="Flow Reference" doc:id="00e73de2-a2de-4fd5-a8e2-a674d3671588" name="New-Order_Sub_Flow"/>
 			</when>
 			<otherwise >
-				<logger level="INFO" doc:name="Logger" doc:id="f0584df6-5e42-4c59-b4fb-1aef03ed7cb9" message="#['Ignoring event type ' ++ payload.&quot;Type&quot;]"/>
+				<logger level="INFO" doc:name="Logger" doc:id="f0584df6-5e42-4c59-b4fb-1aef03ed7cb9" message="#['Ignoring event type ' as String ++ payload.&quot;type&quot; as String]"/>
 			</otherwise>
 		</choice>
 	</flow>
