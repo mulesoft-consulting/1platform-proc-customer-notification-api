@@ -14,8 +14,11 @@ http://www.mulesoft.org/schema/mule/order-fulfillment-api http://www.mulesoft.or
 			<when expression="#[payload.&quot;type&quot; == 'NEW_ORDER']" >
 				<flow-ref doc:name="Flow Reference" doc:id="00e73de2-a2de-4fd5-a8e2-a674d3671588" name="New-Order_Sub_Flow"/>
 			</when>
+			<when expression="#[payload.&quot;type&quot; == 'NEW_CUSTOMER']">
+				<flow-ref doc:name="Flow Reference" doc:id="bbff51ff-607a-47b7-8a9f-58bcb42e89b3" name="New-Customer_Sub_Flow"/>
+			</when>
 			<otherwise >
-				<logger level="INFO" doc:name="Logger" doc:id="f0584df6-5e42-4c59-b4fb-1aef03ed7cb9" message="#['Ignoring event type ' ++ payload.&quot;Type&quot;]"/>
+				<logger level="INFO" doc:name="Logger" doc:id="f0584df6-5e42-4c59-b4fb-1aef03ed7cb9" message="#['Ignoring event type ' as String ++ payload.&quot;type&quot; as String]"/>
 			</otherwise>
 		</choice>
 	</flow>
@@ -26,11 +29,12 @@ http://www.mulesoft.org/schema/mule/order-fulfillment-api http://www.mulesoft.or
 				<ee:set-payload><![CDATA[%dw 2.0
 output application/java
 import * from dw::core::Binaries
-var itemsDescription=((payload.order.orderItems map($.product.name default "NO_NAME")) joinBy ", ")
+var itemsDescription=(payload.order.orderItems map($.product.name default "NO_DESCRIPTION") joinBy ", ")
 var finalDescSMS=(itemsDescription[0 to 56] ++ '...' default itemsDescription[0 to -1] )
 var subjectDescEmail=(itemsDescription[0 to 25] ++ '...' default itemsDescription[0 to -1] )
 var deliveryDate=((now() + |P2D|) as String {format: 'EEEE, MMMM dd'})
-var deliveryAddress=((payload.order.deliveryAddress.addressLines[0])[0 to 15] as String ++ '...' default (payload.order.deliveryAddress.addressLines[0])[0 to -1] default "")
+var deliveryAddressRaw=payload.order.deliveryAddress.addressLines[0] default "NO_ADRESS"
+var deliveryAddress=((deliveryAddressRaw)[0 to 15] as String ++ '...' default (deliveryAddressRaw)[0 to -1])
 ---
 toBase64('<table style="width:500px;color:rgb(51,51,51);margin:0 auto;border-collapse:collapse"> 
    <tbody>
@@ -101,22 +105,22 @@ toBase64('<table style="width:500px;color:rgb(51,51,51);margin:0 auto;border-col
                   <table style="width:100%;text-align:right;line-height:18px;padding:0 10px 0 0;border-collapse:collapse"> 
                    <tbody>
                     <tr style="padding-bottom:1000px"> 
-                     <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756price" style="font-size:12px;white-space:nowrap;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> \$'++ payload.order.subTotal as String default "0" ++'</td> 
+                     <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756price" style="font-size:12px;white-space:nowrap;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> \$'++ (payload.order.subTotal as String default "0") ++'</td> 
                     </tr> 
                     <tr style="padding-bottom:1000px"> 
                      <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756price" style="font-size:12px;white-space:nowrap;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> </td> 
                     </tr> 
                     <tr style="padding-bottom:1000px"> 
-                     <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756price" style="font-size:12px;white-space:nowrap;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> \$'++ payload.order.taxAmount as String default "0" ++'</td> 
+                     <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756price" style="font-size:12px;white-space:nowrap;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> \$'++ (payload.order.taxAmount as String default "0") ++'</td> 
                     </tr> 
                     <tr style="padding-bottom:1000px"> 
                      <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756price" style="font-size:12px;white-space:nowrap;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> </td> 
                     </tr> 
                     <tr style="padding-bottom:1000px"> 
-                     <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756price" style="font-size:12px;white-space:nowrap;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> \$'++ payload.order.shippingCost as String default "0" ++'</td> 
+                     <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756price" style="font-size:12px;white-space:nowrap;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> \$'++ (payload.order.shippingCost as String default "0") ++'</td> 
                     </tr> 
                     <tr style="padding-bottom:1000px"> 
-                     <td style="font-size:14px;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> <b>\$'++ payload.order.totalAmount as String default "0" ++'</b> </td> 
+                     <td style="font-size:14px;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> <b>\$'++ (payload.order.totalAmount as String default "0") ++'</b> </td> 
                     </tr> 
                    </tbody>
                   </table> </td> 
@@ -144,6 +148,60 @@ toBase64('<table style="width:500px;color:rgb(51,51,51);margin:0 auto;border-col
 			<error-handler >
 				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="01a625f7-d0e6-43cc-8d47-d11f9a270aac" >
 					<set-payload value="#['Your new order #' ++ payload.orderId as String default 'XXXXXX' ++ ' was processed.']" doc:name="Set Payload" doc:id="98e966b8-c82e-4ec8-a039-eaa437e5ce02" />
+				</on-error-continue>
+			</error-handler>
+		</try>
+	</flow>
+	<flow name="customer-enrollment-api_Get-Order-HTML-Representation_Flow" doc:id="af9950c1-54b8-446d-93a2-d48b2b213158" >
+		<try doc:name="Try" doc:id="e81056a7-9a2a-47d0-94c2-3fcf5e3fc271" >
+			<ee:transform doc:name="Transform Message" doc:id="563e3dc0-d951-44ff-9896-7aa2c23a23e5">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+import * from dw::core::Binaries
+
+---
+toBase64('
+<table style="width:500px;color:rgb(51,51,51);margin:0 auto;border-collapse:collapse"> 
+    <tbody>
+        <tr>
+            <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756frame" style="vertical-align:top;font-size:13px;line-height:18px;font-family:Arial,sans-serif"><span></span><br><br>
+                <table style="width:500px;border-collapse:collapse"> 
+                    <tbody>
+                        <tr> 
+                            <td style="width:500px;border-bottom:1px solid rgb(234,234,234);padding-top:10px;padding-left:0px;padding-right:0px;padding-bottom:10px;vertical-align:top;font-size:13px;line-height:18px;font-family:Arial,sans-serif"> 
+                                <table cellspacing="0" cellpadding="0" style="border-collapse:collapse"> 
+                                    <tbody>
+                                        <tr> 
+                                            <td style="background-color: #393939; width:500px;border-bottom:10px solid #6ccdf0; border-top: 3px solid #6ccdf0;padding-top:10px;padding-left:10px;padding-right:10px;padding-bottom:10px;vertical-align:top;font-size:13px;line-height:18px;font-family:Arial,sans-serif"> 
+                                                <table cellspacing="0" cellpadding="0" style="border-collapse:collapse;"> 
+                                                    <tbody>
+                                                        <tr> 
+                                                            <td width="250" style="vertical-align:top;font-size:13px;line-height:18px;font-family:Arial,sans-serif"> <a href="https://ntoretail.com" title="Visit ntoretail.com" style="text-decoration:none;color:rgb(0,102,153);font:14px/16px Arial,sans-serif" target="_blank"><img alt="NTO" src="http://s3.amazonaws.com/nto/images/logo-main@2x.png" style="width:210px;height:46px;border:0;"></a> </td> 
+                                                            <td width="250" valign="top" align="right" style="vertical-align:top;font-size:13px;line-height:18px;font-family:Arial,sans-serif"> <p style="font-size:20px;font-family:&quot;arial&quot;,&quot;sans-serif&quot;;margin:1px 0 8px 0;font:12px/16px Arial,sans-serif; color: #FFFFFF;"><font size="4"> Welcome!</font></p> </td> 
+                                                        </tr> 
+                                                    </tbody>
+                                                </table>
+                                            </td>
+                                        </tr> 
+                                    <tr> 
+                                <td istyle="width:100%;padding:0 0 0 0;font-size:14px;vertical-align:top;line-height:18px;font-family:Arial,sans-serif"> <p style="margin:1px 0 8px 0;font:12px/16px Arial,sans-serif"> </p>
+                            <div class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756greeting" style="font-size:18px;line-height:30px;color:rgb(105,105,105)">
+                                Hello ' ++ payload.name as String ++ ',
+                            </div><br> Welcome to Northern Trail Outfitters, and thank you for creating an account. <p style="margin:1px 0 8px 0;font:12px/16px Arial,sans-serif"></p> </td> 
+                        </tr>
+                    </tbody>
+                </table>
+            </td>  
+        </tr>  
+    </tbody>
+</table>
+')]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="24fa8e60-272f-4da8-af10-3bc02a586e0e" >
+					<set-payload value="#['Hello, welcome to Northern Trail Outfitters and thank you for creating an account.']" doc:name="Set Payload" doc:id="2453e27e-a670-45c9-878d-06291eb6e440" />
 				</on-error-continue>
 			</error-handler>
 		</try>
@@ -188,6 +246,46 @@ else
 	[])]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-		<notification-apispec:post-notifications doc:name="Post notifications" doc:id="8f76655c-0ae8-4be2-b86e-baf8df0f54e2" config-ref="Notification_API_Spec_Config"/>
+		<!-- <notification-apispec:post-notifications doc:name="Post notifications" doc:id="8f76655c-0ae8-4be2-b86e-baf8df0f54e2" config-ref="Notification_API_Spec_Config"/> -->
+		<notification-apispec:post doc:name="Post Notifications" doc:id="cdbca6c3-1f97-424e-8dcb-d1c6cc42e9e0" config-ref="Notification_API_Spec_Config"/>
+	</sub-flow>
+	<sub-flow name="New-Customer_Sub_Flow" doc:id="2f7b7a0e-a2db-47f4-9603-cc551f169071" >
+		<customer-apispec:get-customer-by-id doc:name="Get customer by id" doc:id="b27a7715-a79d-4985-8c0f-b3e23b971a39" config-ref="Customer_API_Spec_Config" id="#[payload.body.customerId]" target="customer" />
+		<ee:transform doc:name="Create Notifications" doc:id="4950da9a-f578-417a-bb7e-baca42d3fd49" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+var subject="Welcome to the NTO's family!"
+var messageSMS="We are happy that you joined us!"
+---
+(if ((vars.customer.email filter $."type" == "Work")[0].address != null)
+[
+	{
+		subject: subject,
+		recipient: (vars.customer.email filter $."type" == "Work")[0].address,
+		"type": 'email',
+		priority: 'Info',
+		message: lookup('customer-enrollment-api_Get-Order-HTML-Representation_Flow',vars.customer)
+	}
+]
+else
+	[])
+++
+(if ((vars.customer.phone filter $."type" == "Work")[0].phoneNumber != null)
+[
+	{
+		subject: subject,
+		recipient: (vars.customer.phone filter $."type" == "Work")[0].phoneNumber,
+		"type": 'SMS',
+		priority: 'Info',
+		message: messageSMS
+	}
+]
+else
+	[])]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<notification-apispec:post doc:name="Post Notifications" doc:id="3b44d52d-d77a-490b-b516-fd9e003f57d8" config-ref="Notification_API_Spec_Config"/>
+		<!-- <notification-apispec:post-notifications doc:name="Post notifications" doc:id="7d997efa-45df-4006-af5d-8db648ac8cc3" config-ref="Notification_API_Spec_Config" /> -->
 	</sub-flow>
 </mule>
