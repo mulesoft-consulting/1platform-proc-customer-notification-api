@@ -8,29 +8,122 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 http://www.mulesoft.org/schema/mule/notification-apispec http://www.mulesoft.org/schema/mule/notification-apispec/current/mule-notification-apispec.xsd
 http://www.mulesoft.org/schema/mule/customer-apispec http://www.mulesoft.org/schema/mule/customer-apispec/current/mule-customer-apispec.xsd
 http://www.mulesoft.org/schema/mule/order-fulfillment-api http://www.mulesoft.org/schema/mule/order-fulfillment-api/current/mule-order-fulfillment-api.xsd">
-	<flow name="customer-notification-apiFlow" doc:id="42b7a43c-6731-4813-a479-a09ee66ab7d2" >
-		<anypoint-mq:subscriber doc:name="Subscriber" doc:id="d4d05f42-c8ea-4911-93e4-b881edd9aa6b" config-ref="Anypoint_MQ_Default_subscriber" destination="${anypoint.mq.queue.name}"/>
-		<choice doc:name="Choice" doc:id="e74a5df6-6e18-4cc0-a6a1-9fd14d0d9a4b" >
+	<flow name="customer-notification-apiFlow" doc:id="d34392df-e900-4452-8e29-52e7407358cf" >
+		<anypoint-mq:subscriber doc:name="Subscriber" doc:id="feb9aa5d-c768-49e8-b3af-2a2968a709fc" config-ref="Anypoint_MQ_Default_subscriber" destination="${anypoint.mq.queue.name}" outputMimeType="application/json"/>
+		<ee:transform doc:name="Save Variables" doc:id="88ded002-9ace-4597-9515-5d55619ce249" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="newEvent" ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-variable>
+				<ee:set-variable variableName="originalAttributes" ><![CDATA[%dw 2.0
+output application/java
+---
+attributes]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<choice doc:name="Choice" doc:id="c9aa9b9f-dd9a-4696-b497-ed93179be47b" >
 			<when expression="#[payload.&quot;type&quot; == 'NEW_ORDER']" >
-				<flow-ref doc:name="Flow Reference" doc:id="00e73de2-a2de-4fd5-a8e2-a674d3671588" name="New-Order_Sub_Flow"/>
+				<customer-apispec:get-customer-by-id doc:name="Get customer by id" doc:id="dc882618-6a3f-42fa-b160-8b34f3daefa7" id="#[payload.body.customerId]" target="customer" config-ref="Customer_API_Spec_Config" />
+				<order-fulfillment-api:get-order-by-id doc:name="Get order by id" doc:id="81ad17c6-186a-4e8c-be48-b556fdf0ae01" id="#[vars.newEvent.body.orderId]" target="order" config-ref="Order_Fulfillment_API_Config" />
+				<ee:transform doc:name="Create Notifications" doc:id="83901aec-0d1d-47a9-8ff3-8b35f759f2d6">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+var itemsDescription=((vars.order.orderItems map($.product.name default "NO_NAME")) as Array joinBy ", ")
+var finalDescSMS=(itemsDescription[0 to 56] ++ '...' default itemsDescription[0 to -1] )
+var subjectDescEmail=(itemsDescription[0 to 25] ++ '...' default itemsDescription[0 to -1] )
+var newPayload= {'customer': vars.customer, 'order': vars.order}
+---
+(if ((vars.customer.email filter $."type" == "Work")[0].address != null)
+[
+	{
+		subject: 'Your NTO order of "' ++ subjectDescEmail,
+		recipient: (vars.customer.email filter $."type" == "Work")[0].address,
+		"type": 'email',
+		priority: 'Info',
+		message: lookup('order-fulfillment-api_Get-Order-HTML-Representation_Flow', newPayload)
+	}
+]
+else
+	[])
+++
+(if ((vars.customer.phone filter $."type" == "Work")[0].phoneNumber != null)
+[
+	{
+		subject: 'New Order #' ++ vars.order.orderId as String,
+		recipient: (vars.customer.phone filter $."type" == "Work")[0].phoneNumber,
+		"type": 'SMS',
+		priority: 'Info',
+		//message: 'Your new order #' ++ orderId as String ++ ' was processed.'
+		message: 'Shipped: Your NTO package with ' ++ finalDescSMS ++ ' will be delivered.'
+	}
+]
+else
+	[])]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+				<notification-apispec:post doc:name="Post Notifications" doc:id="d9e3af00-d076-4fb0-8b07-1b7452caa779" config-ref="Notification_API_Spec_Config" />
+			</when>
+			<when expression="#[payload.&quot;type&quot; == 'NEW_CUSTOMER']">
+				<customer-apispec:get-customer-by-id doc:name="Get customer by id" doc:id="f985d9a7-4876-4d5c-a68a-37eb832ab6c3" config-ref="Customer_API_Spec_Config" id="#[payload.body.customerId]" target="customer" />
+				<ee:transform doc:name="Create Notifications" doc:id="e56e68a1-9614-42a9-a8fe-82163042f183">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+var subject="Welcome to the NTO's family!"
+var messageSMS="We are happy that you joined us!"
+---
+(if ((vars.customer.email filter $."type" == "Work")[0].address != null)
+[
+	{
+		subject: subject,
+		recipient: (vars.customer.email filter $."type" == "Work")[0].address,
+		"type": 'email',
+		priority: 'Info',
+		message: lookup('customer-enrollment-api_Get-Order-HTML-Representation_Flow',vars.customer)
+	}
+]
+else
+	[])
+++
+(if ((vars.customer.phone filter $."type" == "Work")[0].phoneNumber != null)
+[
+	{
+		subject: subject,
+		recipient: (vars.customer.phone filter $."type" == "Work")[0].phoneNumber,
+		"type": 'SMS',
+		priority: 'Info',
+		message: messageSMS
+	}
+]
+else
+	[])]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+				<notification-apispec:post doc:name="Post Notifications" doc:id="3bedd970-320a-42dd-b3ba-908c4d321a40" config-ref="Notification_API_Spec_Config" />
 			</when>
 			<otherwise >
-				<logger level="INFO" doc:name="Logger" doc:id="f0584df6-5e42-4c59-b4fb-1aef03ed7cb9" message="#['Ignoring event type ' ++ payload.&quot;Type&quot;]"/>
+				<logger level="WARN" doc:name="Logger" doc:id="338261b6-60dc-4b2e-b8a2-d5520a8d8bfa" message="#['Ignoring event type ' as String ++ vars.newEvent.&quot;type&quot; as String]"/>
 			</otherwise>
 		</choice>
+		<logger level="INFO" doc:name="Logger" doc:id="09458047-4bed-4066-8aca-67095b48b3cf" message="#['Event of type ' ++ vars.newEvent.&quot;type&quot; default &quot;UNKNOWN&quot; as String ++ ' processed.']"/>
 	</flow>
-	<flow name="order-fulfillment-api_Get-Order-HTML-Representation_Flow" doc:id="1c94644e-3aef-4e5b-a960-6e94b3d3b605" >
-		<try doc:name="Try" doc:id="43c4597a-d5e7-4ab6-9df2-0e13ca0ee0db" >
-			<ee:transform doc:name="Transform Message" doc:id="827544c3-5584-4037-a78a-23ec56e489fd">
+	<flow name="order-fulfillment-api_Get-Order-HTML-Representation_Flow" doc:id="4a159e68-8cf1-4899-9332-217933f96054" >
+		<try doc:name="Try" doc:id="319c226a-12f7-4933-b216-f05fa3d1bb9a" >
+			<ee:transform doc:name="Transform Message" doc:id="2d4594e7-b645-47bc-b50e-67579cc39326">
 			<ee:message>
 				<ee:set-payload><![CDATA[%dw 2.0
 output application/java
 import * from dw::core::Binaries
-var itemsDescription=((payload.order.orderItems map($.product.name default "NO_NAME")) joinBy ", ")
+var itemsDescription=(payload.order.orderItems map($.product.name default "NO_DESCRIPTION") joinBy ", ")
 var finalDescSMS=(itemsDescription[0 to 56] ++ '...' default itemsDescription[0 to -1] )
 var subjectDescEmail=(itemsDescription[0 to 25] ++ '...' default itemsDescription[0 to -1] )
 var deliveryDate=((now() + |P2D|) as String {format: 'EEEE, MMMM dd'})
-var deliveryAddress=((payload.order.deliveryAddress.addressLines[0])[0 to 15] as String ++ '...' default (payload.order.deliveryAddress.addressLines[0])[0 to -1] default "")
+var deliveryAddressRaw=payload.order.deliveryAddress.addressLines[0] default "NO_ADRESS"
+var deliveryAddress=((deliveryAddressRaw)[0 to 15] as String ++ '...' default (deliveryAddressRaw)[0 to -1])
 ---
 toBase64('<table style="width:500px;color:rgb(51,51,51);margin:0 auto;border-collapse:collapse"> 
    <tbody>
@@ -101,22 +194,22 @@ toBase64('<table style="width:500px;color:rgb(51,51,51);margin:0 auto;border-col
                   <table style="width:100%;text-align:right;line-height:18px;padding:0 10px 0 0;border-collapse:collapse"> 
                    <tbody>
                     <tr style="padding-bottom:1000px"> 
-                     <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756price" style="font-size:12px;white-space:nowrap;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> \$'++ payload.order.subTotal as String default "0" ++'</td> 
+                     <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756price" style="font-size:12px;white-space:nowrap;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> \$'++ (payload.order.subTotal as String default "0") ++'</td> 
                     </tr> 
                     <tr style="padding-bottom:1000px"> 
                      <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756price" style="font-size:12px;white-space:nowrap;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> </td> 
                     </tr> 
                     <tr style="padding-bottom:1000px"> 
-                     <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756price" style="font-size:12px;white-space:nowrap;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> \$'++ payload.order.taxAmount as String default "0" ++'</td> 
+                     <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756price" style="font-size:12px;white-space:nowrap;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> \$'++ (payload.order.taxAmount as String default "0") ++'</td> 
                     </tr> 
                     <tr style="padding-bottom:1000px"> 
                      <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756price" style="font-size:12px;white-space:nowrap;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> </td> 
                     </tr> 
                     <tr style="padding-bottom:1000px"> 
-                     <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756price" style="font-size:12px;white-space:nowrap;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> \$'++ payload.order.shippingCost as String default "0" ++'</td> 
+                     <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756price" style="font-size:12px;white-space:nowrap;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> \$'++ (payload.order.shippingCost as String default "0") ++'</td> 
                     </tr> 
                     <tr style="padding-bottom:1000px"> 
-                     <td style="font-size:14px;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> <b>\$'++ payload.order.totalAmount as String default "0" ++'</b> </td> 
+                     <td style="font-size:14px;background-color:rgb(239,239,239);text-align:right;line-height:18px;padding:0 10px 0 0;vertical-align:top;font-family:Arial,sans-serif"> <b>\$'++ (payload.order.totalAmount as String default "0") ++'</b> </td> 
                     </tr> 
                    </tbody>
                   </table> </td> 
@@ -142,52 +235,64 @@ toBase64('<table style="width:500px;color:rgb(51,51,51);margin:0 auto;border-col
 			</ee:message>
 		</ee:transform>
 			<error-handler >
-				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="01a625f7-d0e6-43cc-8d47-d11f9a270aac" >
-					<set-payload value="#['Your new order #' ++ payload.orderId as String default 'XXXXXX' ++ ' was processed.']" doc:name="Set Payload" doc:id="98e966b8-c82e-4ec8-a039-eaa437e5ce02" />
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="8989de54-9fa3-469b-86f2-7697d3883a71" >
+					<set-payload value="#['Your new order #' ++ payload.orderId as String default 'XXXXXX' ++ ' was processed.']" doc:name="Set Payload" doc:id="13775402-1d61-48ed-a047-95e51925be1f" />
 				</on-error-continue>
 			</error-handler>
 		</try>
 	</flow>
-	<sub-flow name="New-Order_Sub_Flow" doc:id="5006ad0c-6ec8-476c-a932-3adb01139f01" >
-		<customer-apispec:get-customer-by-id doc:name="Get customer by id" doc:id="c0dac0b7-92e2-477f-b8da-63462deceeaf" id="#[payload.body.customerId]" target="customer" config-ref="Customer_API_Spec_Config"/>
-		<order-fulfillment-api:get-order-by-id doc:name="Get order by id" doc:id="80279209-03bd-4ff9-83a6-51ab69ac135c" id="#[payload.body.orderId]" target="order" config-ref="Order_Fulfillment_API_Config"/>
-		<ee:transform doc:name="Create Notifications" doc:id="ee13149f-b406-45f3-b1af-8bcacd2a8047" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+	<flow name="customer-enrollment-api_Get-Order-HTML-Representation_Flow" doc:id="91b16602-c312-4fc4-b455-f535ba3920e7" >
+		<try doc:name="Try" doc:id="7a11de2b-54e4-40f1-848d-34925db92f42" >
+			<ee:transform doc:name="Transform Message" doc:id="94aeb92c-2c43-4335-b88a-420140a8ee1e">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/java
-var itemsDescription=((vars.order.orderItems map($.product.name default "NO_NAME")) as Array joinBy ", ")
-var finalDescSMS=(itemsDescription[0 to 56] ++ '...' default itemsDescription[0 to -1] )
-var subjectDescEmail=(itemsDescription[0 to 25] ++ '...' default itemsDescription[0 to -1] )
-var newPayload= {'customer': vars.customer, 'order': vars.order}
+import * from dw::core::Binaries
+
 ---
-(if ((vars.customer.email filter $."type" == "Work")[0].address != null)
-[
-	{
-		subject: 'Your NTO order of "' ++ subjectDescEmail,
-		recipient: (vars.customer.email filter $."type" == "Work")[0].address,
-		"type": 'email',
-		priority: 'Info',
-		message: lookup('order-fulfillment-api_Get-Order-HTML-Representation_Flow', newPayload)
-	}
-]
-else
-	[])
-++
-(if ((vars.customer.phone filter $."type" == "Work")[0].phoneNumber != null)
-[
-	{
-		subject: 'New Order #' ++ vars.order.orderId as String,
-		recipient: (vars.customer.phone filter $."type" == "Work")[0].phoneNumber,
-		"type": 'SMS',
-		priority: 'Info',
-		//message: 'Your new order #' ++ orderId as String ++ ' was processed.'
-		message: 'Shipped: Your NTO package with ' ++ finalDescSMS ++ ' will be delivered.'
-	}
-]
-else
-	[])]]></ee:set-payload>
+toBase64('
+<table style="width:500px;color:rgb(51,51,51);margin:0 auto;border-collapse:collapse"> 
+    <tbody>
+        <tr>
+            <td class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756frame" style="vertical-align:top;font-size:13px;line-height:18px;font-family:Arial,sans-serif"><span></span><br><br>
+                <table style="width:500px;border-collapse:collapse"> 
+                    <tbody>
+                        <tr> 
+                            <td style="width:500px;border-bottom:1px solid rgb(234,234,234);padding-top:10px;padding-left:0px;padding-right:0px;padding-bottom:10px;vertical-align:top;font-size:13px;line-height:18px;font-family:Arial,sans-serif"> 
+                                <table cellspacing="0" cellpadding="0" style="border-collapse:collapse"> 
+                                    <tbody>
+                                        <tr> 
+                                            <td style="background-color: #393939; width:500px;border-bottom:10px solid #6ccdf0; border-top: 3px solid #6ccdf0;padding-top:10px;padding-left:10px;padding-right:10px;padding-bottom:10px;vertical-align:top;font-size:13px;line-height:18px;font-family:Arial,sans-serif"> 
+                                                <table cellspacing="0" cellpadding="0" style="border-collapse:collapse;"> 
+                                                    <tbody>
+                                                        <tr> 
+                                                            <td width="250" style="vertical-align:top;font-size:13px;line-height:18px;font-family:Arial,sans-serif"> <a href="https://ntoretail.com" title="Visit ntoretail.com" style="text-decoration:none;color:rgb(0,102,153);font:14px/16px Arial,sans-serif" target="_blank"><img alt="NTO" src="http://s3.amazonaws.com/nto/images/logo-main@2x.png" style="width:210px;height:46px;border:0;"></a> </td> 
+                                                            <td width="250" valign="top" align="right" style="vertical-align:top;font-size:13px;line-height:18px;font-family:Arial,sans-serif"> <p style="font-size:20px;font-family:&quot;arial&quot;,&quot;sans-serif&quot;;margin:1px 0 8px 0;font:12px/16px Arial,sans-serif; color: #FFFFFF;"><font size="4"> Welcome!</font></p> </td> 
+                                                        </tr> 
+                                                    </tbody>
+                                                </table>
+                                            </td>
+                                        </tr> 
+                                    <tr> 
+                                <td istyle="width:100%;padding:0 0 0 0;font-size:14px;vertical-align:top;line-height:18px;font-family:Arial,sans-serif"> <p style="margin:1px 0 8px 0;font:12px/16px Arial,sans-serif"> </p>
+                            <div class="m_2168160323284753779m_8812380813803576096m_-1446670953143247756greeting" style="font-size:18px;line-height:30px;color:rgb(105,105,105)">
+                                Hello ' ++ payload.name as String ++ ',
+                            </div><br> Welcome to Northern Trail Outfitters, and thank you for creating an account. <p style="margin:1px 0 8px 0;font:12px/16px Arial,sans-serif"></p> </td> 
+                        </tr>
+                    </tbody>
+                </table>
+            </td>  
+        </tr>  
+    </tbody>
+</table>
+')]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-		<notification-apispec:post-notifications doc:name="Post notifications" doc:id="8f76655c-0ae8-4be2-b86e-baf8df0f54e2" config-ref="Notification_API_Spec_Config"/>
-	</sub-flow>
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="7df6e817-29e3-4e85-abae-9fe7180a255c" >
+					<set-payload value="#['Hello, welcome to Northern Trail Outfitters and thank you for creating an account.']" doc:name="Set Payload" doc:id="8a6ff0a9-3cd1-4b68-9bc3-331b9ba5b4c9" />
+				</on-error-continue>
+			</error-handler>
+		</try>
+	</flow>
 </mule>

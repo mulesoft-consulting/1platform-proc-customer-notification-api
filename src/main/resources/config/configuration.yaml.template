@@ -1,11 +1,4 @@
 anypoint:
-  platform:
-    analytics_base_uri: 
-    client_id: 
-    client_secret: 
-    base_uri: 
-    visualizer: 
-      layer: "Process"
   mq:
     url: 
     queue:
@@ -36,6 +29,5 @@ orderFulfillment:
     basePath: 
     
 app: 
-  client:
-    id: 
-    secret: 
+  client_id: 
+  client_secret: 
