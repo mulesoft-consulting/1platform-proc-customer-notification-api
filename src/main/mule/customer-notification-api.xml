@@ -294,5 +294,4 @@ toBase64('
 			</error-handler>
 		</try>
 	</flow>
->>>>>>> 58dac834a26b58ffaeaf399151d580d2febb9075
 </mule>
