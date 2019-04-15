@@ -18,4 +18,14 @@ properties:
         type: object]]></types:shape>
     </types:type>
   </types:catalog>
+  <types:enrichment select="#d4d05f42-c8ea-4911-93e4-b881edd9aa6b">
+    <types:processor-declaration>
+      <types:output-event>
+        <types:message>
+          <types:payload type="event"/>
+        </types:message>
+      </types:output-event>
+    </types:processor-declaration>
+  </types:enrichment>
+  <types:enrichment select="#54693fb4-397f-471b-91c4-8bd5970fb942"/>
 </types:mule>

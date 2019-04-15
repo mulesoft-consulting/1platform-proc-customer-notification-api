@@ -8,7 +8,7 @@ http://www.mulesoft.org/schema/mule/customer-apispec http://www.mulesoft.org/sch
 http://www.mulesoft.org/schema/mule/notification-apispec http://www.mulesoft.org/schema/mule/notification-apispec/current/mule-notification-apispec.xsd
 http://www.mulesoft.org/schema/mule/order-fulfillment-api http://www.mulesoft.org/schema/mule/order-fulfillment-api/current/mule-order-fulfillment-api.xsd">
 	<configuration-properties doc:name="Configuration properties" doc:id="1bd2fc7f-0455-487f-b019-506bc65af6b9" file="config/configuration.yaml" />
-	<anypoint-mq:default-subscriber-config name="Anypoint_MQ_Default_subscriber" doc:name="Anypoint MQ Default subscriber" doc:id="6e0e8901-7bdd-442b-b618-0161c7c71642" >
+	<anypoint-mq:default-subscriber-config name="Anypoint_MQ_Default_subscriber" doc:name="Anypoint MQ Default subscriber" doc:id="6e0e8901-7bdd-442b-b618-0161c7c71642" acknowledgementTimeout="30000">
 		<anypoint-mq:connection url="${anypoint.mq.url}" clientId="${anypoint.mq.client.id}" clientSecret="${anypoint.mq.client.secret}" />
 	</anypoint-mq:default-subscriber-config>
 	<customer-apispec:config name="Customer_API_Spec_Config" doc:name="Customer API Spec Config" doc:id="a2d77e01-b695-46eb-bfca-f1868cc4c7be" property_host="${customer.dapi.host}" property_port="${customer.dapi.port}" property_basePath="${customer.dapi.basePath}" property_protocol="${customer.dapi.protocol}" property_client-id="${app.client_id}" property_client-secret="${app.client_secret}"/>
