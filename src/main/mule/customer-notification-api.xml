@@ -107,7 +107,7 @@ else
 			</when>
 			<otherwise >
 				<logger level="WARN" doc:name="Logger" doc:id="338261b6-60dc-4b2e-b8a2-d5520a8d8bfa" message="#['Ignoring event type ' as String ++ vars.newEvent.&quot;type&quot; as String]"/>
-            </otherwise>
+			</otherwise>
 		</choice>
 		<logger level="INFO" doc:name="Logger" doc:id="09458047-4bed-4066-8aca-67095b48b3cf" message="#['Event of type ' ++ vars.newEvent.&quot;type&quot; default &quot;UNKNOWN&quot; as String ++ ' processed.']"/>
 	</flow>
@@ -288,8 +288,8 @@ toBase64('
 			</ee:message>
 		</ee:transform>
 			<error-handler >
-				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="24fa8e60-272f-4da8-af10-3bc02a586e0e" >
-					<set-payload value="#['Hello, welcome to Northern Trail Outfitters and thank you for creating an account.']" doc:name="Set Payload" doc:id="2453e27e-a670-45c9-878d-06291eb6e440" />
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="7df6e817-29e3-4e85-abae-9fe7180a255c" >
+					<set-payload value="#['Hello, welcome to Northern Trail Outfitters and thank you for creating an account.']" doc:name="Set Payload" doc:id="8a6ff0a9-3cd1-4b68-9bc3-331b9ba5b4c9" />
 				</on-error-continue>
 			</error-handler>
 		</try>
